@@ -16,7 +16,7 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  title: "SERPHIDA",
+  title: "JETEEAH",
   description: "A mobile-first snake game UI",
 };
 

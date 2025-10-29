@@ -10,7 +10,7 @@ const Landing = () => {
     <div className="bg-[#27C04033] h-screen">
       <div className="flex flex-col items-center justify-center h-100">
         <Image src="/images/snake.png" alt="Image" width={150} height={150} />
-        <p className="font-space text-4xl font-medium">SERPHIDA</p>
+        <p className="font-space text-4xl font-medium">JETEEAH</p>
       </div>
       <div className="flex flex-col items-center justify-center gap-3 font-space text-lg ">
         <Button
