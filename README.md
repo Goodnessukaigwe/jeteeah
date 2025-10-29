@@ -40,7 +40,7 @@ A modern, Web3-powered Snake game built with Next.js, featuring classic gameplay
 
    ```bash
    git clone <repository-url>
-   cd snake
+   cd jeteeah
    ```
 
 2. **Install dependencies**
