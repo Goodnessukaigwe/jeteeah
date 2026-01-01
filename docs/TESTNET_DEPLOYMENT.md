@@ -101,6 +101,7 @@ curl -I https://faucet.testnet.linera.io
 If you get "Could not resolve host" errors, the testnet is not currently available. Use local development instead.
 
 For testnet status updates:
+
 - Check [Linera Discord](https://discord.gg/linera) #announcements
 - Check [Linera Documentation](https://linera.dev)
 

@@ -9,6 +9,7 @@ Jeteeah is a fully functional blockchain-powered Snake game built for the Linera
 ### ✅ Completed Implementation
 
 #### 1. Smart Contract (Rust/WASM)
+
 - **Location**: `backend/src/`
 - **Status**: ✅ Compiles successfully
 - **Build Output**: WASM binaries generated at `backend/target/wasm32-unknown-unknown/release/`
@@ -20,6 +21,7 @@ Jeteeah is a fully functional blockchain-powered Snake game built for the Linera
   - Transaction history
 
 #### 2. Frontend Integration
+
 - **Framework**: Next.js 16 with React 19
 - **Blockchain Client**: GraphQL with `graphql-request`
 - **Features**:
@@ -30,7 +32,9 @@ Jeteeah is a fully functional blockchain-powered Snake game built for the Linera
   - Configuration validation
 
 #### 3. Deployment Infrastructure
+
 - **Scripts Created**:
+
   - `scripts/deploy-testnet.sh` - Automated testnet deployment
   - `scripts/build-backend.sh` - Smart contract compilation
   - `scripts/deploy-local.sh` - Local blockchain deployment
@@ -42,6 +46,7 @@ Jeteeah is a fully functional blockchain-powered Snake game built for the Linera
   - `TESTNET_SUMMARY.md` - Implementation overview
 
 #### 4. Configuration Management
+
 - Environment-based network switching
 - Automatic endpoint detection
 - Mock mode for development/testing
@@ -54,11 +59,12 @@ Jeteeah is a fully functional blockchain-powered Snake game built for the Linera
 **Issue**: The Linera public testnet is currently inaccessible.
 
 **Evidence**:
+
 ```bash
 $ curl https://testnet.linera.io
 curl: (6) Could not resolve host: testnet.linera.io
 
-$ curl https://faucet.testnet.linera.io  
+$ curl https://faucet.testnet.linera.io
 curl: (6) Could not resolve host: faucet.testnet.linera.io
 ```
 
@@ -71,9 +77,10 @@ curl: (6) Could not resolve host: faucet.testnet.linera.io
 **Issue**: Official Linera Docker images (`lineraio/linera`) referenced in `docker-compose.yml` are not publicly available.
 
 **Evidence**:
+
 ```bash
 $ docker pull lineraio/linera
-Error response from daemon: pull access denied for lineraio/linera, 
+Error response from daemon: pull access denied for lineraio/linera,
 repository does not exist or may require 'docker login'
 ```
 
@@ -111,6 +118,7 @@ NEXT_PUBLIC_ENABLE_BLOCKCHAIN=true
 ```
 
 **Features Demonstrated:**
+
 - ✅ Wallet connection flow
 - ✅ Points accumulation on-chain
 - ✅ Game state synchronization
@@ -128,6 +136,7 @@ npm run deploy:testnet
 ```
 
 The script will:
+
 1. Initialize wallet automatically
 2. Request testnet tokens from faucet
 3. Build and deploy smart contract
@@ -135,6 +144,7 @@ The script will:
 5. Generate production configuration
 
 Then simply:
+
 ```bash
 # Update .env.local with testnet values (provided by script)
 npm run dev  # App connects to live blockchain
@@ -172,7 +182,7 @@ const config: BlockchainConfig = {
   endpoint: process.env.NEXT_PUBLIC_LINERA_ENDPOINT,
   chainId: process.env.NEXT_PUBLIC_CHAIN_ID,
   appId: process.env.NEXT_PUBLIC_APP_ID,
-  enableMockWallet: process.env.NEXT_PUBLIC_WALLET_MOCK === 'true',
+  enableMockWallet: process.env.NEXT_PUBLIC_WALLET_MOCK === "true",
 };
 
 // Constructs: https://testnet.linera.io/chains/{chainId}/applications/{appId}
@@ -183,6 +193,7 @@ const config: BlockchainConfig = {
 ## Verification Steps (When Testnet Available)
 
 ### 1. Check Testnet Availability
+
 ```bash
 curl -I https://testnet.linera.io
 curl -I https://faucet.testnet.linera.io
@@ -191,12 +202,14 @@ curl -I https://faucet.testnet.linera.io
 Both should return HTTP 200 responses (currently return DNS errors).
 
 ### 2. Deploy to Testnet
+
 ```bash
 npm run deploy:testnet
 # Outputs Chain ID and Application ID
 ```
 
 ### 3. Configure Environment
+
 ```bash
 # Copy output from deployment
 NEXT_PUBLIC_LINERA_ENDPOINT=https://testnet.linera.io
@@ -206,12 +219,14 @@ NEXT_PUBLIC_WALLET_MOCK=false
 ```
 
 ### 4. Verify Connection
+
 - Green "🌐 TESTNET Conway" badge appears in UI
 - Network status shows "Testnet Conway"
 - Console shows: `Endpoint: https://testnet.linera.io`
 - Wallet connection prompts for Linera wallet extension
 
 ### 5. Test Blockchain Operations
+
 - Start game → Transaction submitted to blockchain
 - Score updates → Synced from on-chain state
 - End game → Points recorded on blockchain
@@ -222,17 +237,20 @@ NEXT_PUBLIC_WALLET_MOCK=false
 ### To Test Current Implementation
 
 1. **Clone Repository**
+
    ```bash
    git clone https://github.com/Goodnessukaigwe/jeteeah.git
    cd jeteeah
    ```
 
 2. **Install Dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Run in Mock Mode**
+
    ```bash
    # .env.local is already configured for mock mode
    npm run dev
@@ -250,10 +268,12 @@ All blockchain integration logic is active and functional, just using mock data 
 ### To Verify Testnet Readiness
 
 1. **Check Testnet Status**
+
    - Visit [Linera Discord](https://discord.gg/linera) #announcements
    - Check [Linera Documentation](https://linera.dev) for testnet updates
 
 2. **Review Smart Contract**
+
    ```bash
    # Contract is already built and ready
    ls backend/target/wasm32-unknown-unknown/release/*.wasm
@@ -286,6 +306,7 @@ All documentation is comprehensive and up-to-date:
 ## Code Quality Indicators
 
 ### Backend (Smart Contract)
+
 - ✅ Compiles without errors
 - ✅ Uses latest Linera SDK (v0.15.4)
 - ✅ WASM target configured correctly
@@ -293,6 +314,7 @@ All documentation is comprehensive and up-to-date:
 - ✅ 4 core modules: contract, service, state, lib
 
 ### Frontend
+
 - ✅ TypeScript strict mode
 - ✅ Next.js 16 App Router
 - ✅ React 19 with modern hooks
@@ -302,6 +324,7 @@ All documentation is comprehensive and up-to-date:
 - ✅ Network status indicators
 
 ### Integration
+
 - ✅ GraphQL client configured
 - ✅ Environment-based configuration
 - ✅ Mock mode for development
