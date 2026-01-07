@@ -11,6 +11,8 @@
     "build:backend": "chmod +x scripts/build-backend.sh && ./scripts/build-backend.sh",
     "deploy:local": "chmod +x scripts/deploy-local.sh && ./scripts/deploy-local.sh",
     "deploy:testnet": "chmod +x scripts/deploy-testnet.sh && ./scripts/deploy-testnet.sh",
+    "conway:service": "chmod +x scripts/start-conway-service.sh && ./scripts/start-conway-service.sh",
+    "deploy:conway": "npm run build:backend && npm run deploy:testnet",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",

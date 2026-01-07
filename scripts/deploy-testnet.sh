@@ -75,15 +75,15 @@ if [[ $WALLET_INFO == *"file is empty or does not exist"* ]] || [[ $WALLET_INFO 
     
     # Initialize wallet with testnet faucet
     echo "Initializing wallet..."
-    linera wallet init --faucet https://faucet.testnet.linera.io
+    linera wallet init --faucet https://faucet.testnet-conway.linera.net
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ Wallet initialized${NC}"
         echo ""
         
         # Request a chain from the faucet
-        echo "💰 Requesting chain from testnet faucet..."
-        linera wallet request-chain --faucet https://faucet.testnet.linera.io --set-default
+        echo "💰 Requesting chain from Conway testnet faucet..."
+        linera wallet request-chain --faucet https://faucet.testnet-conway.linera.net --set-default
         
         if [ $? -eq 0 ]; then
             echo -e "${GREEN}✓ Chain created on testnet${NC}"
