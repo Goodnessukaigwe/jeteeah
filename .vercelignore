@@ -1,0 +1,5 @@
+# Ignore backend directory during Vercel builds
+backend/
+
+# Ignore old backend directory if it exists
+Jeeteah-Backend/
