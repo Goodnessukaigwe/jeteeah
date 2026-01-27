@@ -60,12 +60,22 @@ npm run dev
 - **State Management**: React Context API
 - **Blockchain Client**: GraphQL with graphql-request
 
-### Backend (Linera Smart Contract)
+### Backend
+
+**Linera Smart Contract**
 
 - **Language**: Rust
 - **Blockchain**: Linera Protocol
 - **Contract**: WASM-compiled smart contract
 - **Services**: GraphQL API for queries
+
+**Multiplayer Backend Service**
+
+- **Runtime**: Node.js 20
+- **Framework**: Express.js
+- **Real-time**: Socket.IO for WebSocket connections
+- **Language**: TypeScript
+- **Port**: 3001 (default)
 
 ### DevOps
 
@@ -155,14 +165,20 @@ npm run dev              # Start Next.js dev server
 npm run build            # Build for production
 npm run start            # Start production server
 
-# Backend & Blockchain
+# Backend Service (Multiplayer)
+npm run backend:dev      # Start backend dev server
+npm run backend:install  # Install backend dependencies
+npm run backend:build    # Build backend
+npm run dev:all          # Run frontend + backend concurrently
+
+# Blockchain (Linera Smart Contract)
 npm run setup:local      # Setup local Linera node
-npm run build:backend    # Build smart contract
+npm run build:backend    # Build smart contract (Note: conflicts with backend:build)
 npm run deploy:local     # Deploy to local node
 
 # Docker
-npm run docker:up        # Start Linera node
-npm run docker:down      # Stop node
+npm run docker:up        # Start all services (Linera + Backend)
+npm run docker:down      # Stop all services
 npm run docker:logs      # View logs
 npm run docker:reset     # Reset blockchain data
 
@@ -180,12 +196,22 @@ jeteeah/
 │   ├── game/                     # Main game page
 │   ├── gameover/                 # Game over page
 │   ├── landing/                  # Landing page
+│   ├── multiplayer/              # Multiplayer game modes
 │   ├── reward/                   # Rewards/achievements page
 │   ├── skin/                     # Skin customization page
 │   ├── start/                    # Game start page
 │   ├── wallet/                   # Wallet connection page
 │   └── leaderboard/              # Global leaderboard
-├── backend/                      # Linera smart contract (Rust)
+├── backend/                      # Multiplayer Backend Service (Node.js)
+│   ├── api/
+│   │   ├── config/               # Server configuration
+│   │   ├── service/              # Game room management
+│   │   └── types/                # TypeScript types
+│   ├── app.ts                    # Express app setup
+│   ├── server.ts                 # Server entry point
+│   ├── Dockerfile                # Docker configuration
+│   └── package.json              # Backend dependencies
+├── smart-contract/               # Linera Smart Contract (Rust)
 │   ├── src/
 │   │   ├── contract.rs           # Game logic & operations
 │   │   ├── service.rs            # GraphQL service
@@ -213,21 +239,12 @@ jeteeah/
 │   ├── setup-local.sh            # Local env setup
 │   ├── build-backend.sh          # Contract build
 │   └── deploy-local.sh           # Contract deployment
-├── docker-compose.yml            # Local Linera node
+├── docker-compose.yml            # All services orchestration
 ├── linera.toml                   # Project configuration
 └── .devcontainer/                # VSCode dev container
 ```
 
 ## 🎯 Key Features
-
-- **Blockchain Integration**: All game data stored on Linera blockchain
-- **On-Chain Leaderboard**: Global rankings with verifiable scores
-- **Points System**: Earn and spend points for skins and achievements
-- **Achievement Tracking**: Unlock milestones stored permanently on-chain
-- **Wallet Connection**: Secure Web3 wallet integration
-- **Mock Mode**: Test gameplay without blockchain connection
-- **Offline-First**: Play locally, sync when connected
-- **Real-Time Sync**: Automatic state synchronization with blockchain
 
 ## 🚀 Deployment
 
@@ -239,6 +256,8 @@ jeteeah/
    cp .env.example .env.local
    # Edit .env.local with testnet values
    ```
+
+````
 
 2. **Build Contract**:
 
@@ -296,3 +315,4 @@ Built with the [Linera Buildathon Template](https://github.com/linera-io/buildat
 ---
 
 **Made with ❤️ for the Linera Blockchain**
+````

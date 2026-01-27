@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "es2016",                          /* specific target for your code */
+    "module": "esnext",                          /* ES modules to match package.json type: module */
+    "moduleResolution": "bundler",               /* Module resolution strategy for ES modules */
+    "rootDir": "./",                             /* Where your .ts files are */
+    "outDir": "./dist",                          /* Where the built .js files go */
+    "esModuleInterop": true,                     /* Fixes imports for CommonJS modules */
+    "forceConsistentCasingInFileNames": true,    /* Prevents casing bugs on Windows/Mac */
+
+    /* Strict Type-Checking Options */
+    "strict": true,                              /* Enable strict type-checking options */
+    "noImplicitAny": true,                       /* Raise error on expressions and declarations with an implied 'any' type */
+    "strictNullChecks": true,                    /* Ensure you handle null/undefined */
+    "skipLibCheck": true,                        /* Skip type checking of declaration files */
+    
+    /* Backend Specifics */
+    "types": ["node"],                           /* Essential for Node.js */
+    "lib": ["esnext"]                            /* specific library to include */
+  },
+  "include": ["**/*"],
+  "exclude": ["node_modules"]
+}

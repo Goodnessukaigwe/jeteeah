@@ -40,6 +40,52 @@ const SnakeGamePage = () => {
   
   // Use ref to track if food was just eaten
   const foodEatenRef = useRef(false);
+  
+  // Smooth head rotation
+  const [headRotation, setHeadRotation] = useState(0);
+  const targetRotationRef = useRef(0);
+
+  // Helper function to get rotation angle based on direction
+  const getRotation = (dir: { x: number; y: number }) => {
+    if (dir.y === -1) return 0;    // Up
+    if (dir.x === 1) return 90;    // Right
+    if (dir.y === 1) return 180;   // Down
+    if (dir.x === -1) return 270;  // Left
+    return 0;
+  };
+  
+  // Smooth rotation animation
+  useEffect(() => {
+    const targetAngle = getRotation(direction);
+    targetRotationRef.current = targetAngle;
+    
+    const animateRotation = () => {
+      setHeadRotation((current) => {
+        const target = targetRotationRef.current;
+        
+        // Calculate shortest rotation path
+        let diff = target - current;
+        
+        // Normalize to -180 to 180
+        while (diff > 180) diff -= 360;
+        while (diff < -180) diff += 360;
+        
+        // Smooth interpolation (adjust 0.3 for speed - higher = faster)
+        const newRotation = current + diff * 0.3;
+        
+        // Snap to target if very close
+        if (Math.abs(diff) < 1) {
+          return target;
+        }
+        
+        return newRotation;
+      });
+    };
+    
+    // Animate at 60fps
+    const interval = setInterval(animateRotation, 16);
+    return () => clearInterval(interval);
+  }, [direction]);
 
   // Reset score and game state when component mounts or gameKey changes
   useEffect(() => {
@@ -198,59 +244,209 @@ const SnakeGamePage = () => {
 
       {/* Game grid container */}
       <div className="flex-1 flex items-center justify-center bg-[#0F172A] relative mt">
-        {/* Game grid - fixed size */}
+        {/* Game board - fixed size with border only */}
         <div
-          className="relative border-b border-gray-800 mt-15"
+          className="relative border-y border-gray-500  mt-15"
           style={{
             width: boardWidth,
             height: boardHeight,
-            backgroundImage:
-              "linear-gradient(to right, #1E293B 1px, transparent 1px), linear-gradient(to bottom, #1E293B 1px, transparent 1px)",
-            backgroundSize: `${boardWidth / gridSize}px ${
-              boardHeight / gridSize
-            }px`,
+            // backgroundColor: '#1E293B',
           }}
         >
-        {/* Food */}
-        <div
-          className={`absolute ${
-            isBlockchainMode
-              ? "bg-yellow-400 shadow-lg shadow-yellow-500/50 animate-pulse"
-              : "bg-red-500"
-          }`}
-          style={{
-            width: boardSize,
-            height: boardSize,
-            left: food.x * boardSize,
-            top: food.y * boardSize,
-          }}
-        />
+          {/* Canvas for snake rendering */}
+          <canvas
+            ref={(canvas) => {
+              if (!canvas) return;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
 
-        {/* Snake */}
-        {snake.map((s, i) => (
+              // Clear canvas
+              ctx.clearRect(0, 0, boardWidth, boardHeight);
+
+              // Draw snake as continuous body
+              if (snake.length > 0) {
+                const thickness = boardSize * 0.8;
+                const radius = thickness / 2;
+                
+                // Draw body as continuous path
+                ctx.fillStyle = isBlockchainMode ? '#f59e0b' : '#22c55e';
+                ctx.strokeStyle = isBlockchainMode ? '#f59e0b' : '#22c55e';
+                ctx.lineWidth = thickness;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+                
+                for (let i = 0; i < snake.length; i++) {
+                  const seg = snake[i];
+                  const x = seg.x * boardSize + boardSize / 2;
+                  const y = seg.y * boardSize + boardSize / 2;
+                  
+                  // Check for screen wrap
+                  if (i > 0) {
+                    const prevSeg = snake[i - 1];
+                    const prevX = prevSeg.x * boardSize + boardSize / 2;
+                    const prevY = prevSeg.y * boardSize + boardSize / 2;
+                    const dx = x - prevX;
+                    const dy = y - prevY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // If screen wrap, start new path
+                    if (distance > boardSize * 2) {
+                      ctx.stroke();
+                      ctx.beginPath();
+                      ctx.moveTo(x, y);
+                      continue;
+                    }
+                  }
+                  
+                  if (i === 0) {
+                    ctx.moveTo(x, y);
+                  } else {
+                    ctx.lineTo(x, y);
+                  }
+                }
+                
+                ctx.stroke();
+                
+                // Draw border
+                ctx.strokeStyle = isBlockchainMode ? '#d97706' : '#16a34a';
+                ctx.lineWidth = thickness + 4;
+                ctx.globalCompositeOperation = 'destination-over';
+                
+                ctx.beginPath();
+                for (let i = 0; i < snake.length; i++) {
+                  const seg = snake[i];
+                  const x = seg.x * boardSize + boardSize / 2;
+                  const y = seg.y * boardSize + boardSize / 2;
+                  
+                  if (i > 0) {
+                    const prevSeg = snake[i - 1];
+                    const prevX = prevSeg.x * boardSize + boardSize / 2;
+                    const prevY = prevSeg.y * boardSize + boardSize / 2;
+                    const dx = x - prevX;
+                    const dy = y - prevY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > boardSize * 2) {
+                      ctx.stroke();
+                      ctx.beginPath();
+                      ctx.moveTo(x, y);
+                      continue;
+                    }
+                  }
+                  
+                  if (i === 0) {
+                    ctx.moveTo(x, y);
+                  } else {
+                    ctx.lineTo(x, y);
+                  }
+                }
+                ctx.stroke();
+                
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // Draw head on top
+                const head = snake[0];
+                const headX = head.x * boardSize + boardSize / 2;
+                const headY = head.y * boardSize + boardSize / 2;
+                
+                ctx.save();
+                ctx.translate(
+                  headX + direction.x * 2,
+                  headY + direction.y * 2
+                );
+                
+                // Smooth rotation
+                const angle = (headRotation * Math.PI) / 180;
+                ctx.rotate(angle);
+                
+                // Draw head circle
+                ctx.fillStyle = isBlockchainMode ? '#fbbf24' : '#4ade80';
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Head border
+                ctx.strokeStyle = isBlockchainMode ? '#f59e0b' : '#22c55e';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Eyes
+                const eyeSize = radius * 0.35;
+                const eyeSpacing = radius * 0.5;
+                const eyeY = -radius * 0.3;
+                
+                // Left eye
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, eyeY, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Right eye
+                ctx.beginPath();
+                ctx.arc(eyeSpacing, eyeY, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Pupils
+                ctx.fillStyle = '#000000';
+                const pupilSize = eyeSize * 0.6;
+                
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, eyeY, pupilSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(eyeSpacing, eyeY, pupilSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eye shine
+                ctx.fillStyle = '#ffffff';
+                const shineSize = eyeSize * 0.4;
+                
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing - pupilSize * 0.25, eyeY - pupilSize * 0.25, shineSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(eyeSpacing - pupilSize * 0.25, eyeY - pupilSize * 0.25, shineSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+              }
+            }}
+            width={boardWidth}
+            height={boardHeight}
+            className="absolute top-0 left-0 pointer-events-none"
+            style={{ zIndex: 2 }}
+          />
+
+          {/* Food - keep as div for animation */}
           <div
-            key={i}
-            className={`absolute rounded-sm ${
+            className={`absolute rounded-full ${
               isBlockchainMode
-                ? "bg-gradient-to-br from-yellow-400 to-orange-500 shadow-md shadow-yellow-500/30"
-                : "bg-green-500"
+                ? "bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-500 shadow-lg shadow-yellow-500/50"
+                : "bg-gradient-to-br from-red-400 to-red-600 shadow-lg shadow-red-500/50"
             }`}
             style={{
               width: boardSize,
               height: boardSize,
-              left: s.x * boardSize,
-              top: s.y * boardSize,
+              left: food.x * boardSize,
+              top: food.y * boardSize,
+              boxShadow: `0 0 20px ${isBlockchainMode ? "#fbbf24" : "#ef4444"}`,
+              animation: "pulse 1s ease-in-out infinite, bounce 2s ease-in-out infinite",
+              zIndex: 1,
             }}
           >
-            {i === 0 && (
-              <div className="flex justify-center gap-1 mt-1">
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-              </div>
+            {/* Apple stem (only in normal mode) */}
+            {!isBlockchainMode && (
+              <div 
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-0.5 h-1.5 bg-green-700 rounded-t-sm"
+                style={{ boxShadow: "0 0 2px rgba(0,0,0,0.5)" }}
+              />
             )}
           </div>
-        ))}
-      </div>
+        </div>
       </div>
 
       {/* Pause Overlay */}
