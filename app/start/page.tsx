@@ -90,15 +90,15 @@ const Start = () => {
         </Button>
 
         <div className="flex gap-4">
-          <Button
+          {/* <Button
             className="py-6.5 rounded-full bg-white flex gap-2 w-36 cursor-pointer hover:scale-105 hover:bg-gray-100 transition-all shadow-md"
             onClick={() => router.push("/skin")}
           >
             <BsPalette className="w-5 h-5 text-black" />
             <span className="text-[#FF1414] font-semibold">Skins</span>
-          </Button>
+          </Button> */}
           <Button
-            className="py-6.5 rounded-full bg-white flex gap-2 w-36 cursor-pointer hover:scale-105 hover:bg-gray-100 transition-all shadow-md"
+            className="py-6.5 rounded-full bg-white flex gap-2 w-77 cursor-pointer hover:scale-105 hover:bg-gray-100 transition-all shadow-md"
             onClick={() => router.push("/reward")}
           >
             <HiOutlineTrophy className="w-5 h-5 text-black" />

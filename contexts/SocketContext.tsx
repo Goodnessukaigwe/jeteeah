@@ -3,6 +3,26 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
+export enum PowerUpType {
+  SPEED_BOOST = 'speed_boost',
+  SHIELD = 'shield',
+  CUT = 'cut',
+  DOUBLE_POINTS = 'double_points'
+}
+
+export interface PowerUp {
+  id: string;
+  type: PowerUpType;
+  x: number;
+  y: number;
+  spawnTime: number;
+}
+
+export interface ActivePowerUp {
+  type: PowerUpType;
+  expiresAt: number;
+}
+
 interface PlayerSnake {
   id: string;
   name: string;
@@ -13,6 +33,7 @@ interface PlayerSnake {
   color: number;
   isReady: boolean;
   isHost: boolean;
+  activePowerUps?: ActivePowerUp[];
 }
 
 interface RoomState {
@@ -25,6 +46,7 @@ interface RoomState {
 interface GameState {
   players: PlayerSnake[];
   food: { x: number; y: number };
+  powerUps?: PowerUp[];
   status: 'waiting' | 'playing' | 'finished';
 }
 
@@ -58,7 +80,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     // Prevent duplicate connections
     if (socketRef.current) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL, {
+    // Only connect if API URL is configured
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      console.log('ℹ️ Socket.IO disabled - no API URL configured');
+      return;
+    }
+
+    const newSocket = io(apiUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
@@ -69,16 +98,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     // Connection events
     newSocket.on('connect', () => {
+      console.log('✅ Socket.IO connected');
       setConnected(true);
       setError(null);
     });
 
     newSocket.on('disconnect', () => {
+      console.log('⚠️ Socket.IO disconnected');
       setConnected(false);
     });
 
     newSocket.on('connect_error', (err) => {
-      console.error('❌ Connection error:', err.message);
+      console.warn('⚠️ Socket connection error:', err.message);
       setError(`Connection failed: ${err.message}`);
     });
 

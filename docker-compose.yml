@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   linera-node:
@@ -26,6 +26,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: jeteeah-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app/backend
+      - /app/backend/node_modules
+    environment:
+      - PORT=3001
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+      - NODE_ENV=development
+    networks:
+      - linera-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   linera-faucet:
     image: lineraio/linera:latest

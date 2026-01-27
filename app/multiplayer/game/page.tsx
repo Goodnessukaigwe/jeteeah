@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiPause } from "react-icons/fi";
 import { RiCloseLine } from "react-icons/ri";
 import {
   IoMdArrowUp,
@@ -11,6 +10,15 @@ import {
   IoMdArrowDropright,
 } from "react-icons/io";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
+import { PowerUpType } from "@/contexts/SocketContext";
+
+// Power-up icons and colors
+const POWER_UP_CONFIG = {
+  [PowerUpType.SPEED_BOOST]: { icon: "⚡", color: "#fbbf24", name: "Speed Boost" },
+  [PowerUpType.SHIELD]: { icon: "🛡️", color: "#3b82f6", name: "Shield" },
+  [PowerUpType.CUT]: { icon: "✂️", color: "#f97316", name: "Cut" },
+  [PowerUpType.DOUBLE_POINTS]: { icon: "🌟", color: "#eab308", name: "Double Points" },
+};
 
 // Player colors for multiplayer
 const PLAYER_COLORS = [
@@ -36,7 +44,7 @@ const GameContent = () => {
   const [boardHeight] = useState(400);
   const boardSize = Math.min(boardWidth, boardHeight) / gridSize;
 
-  const [paused, setPaused] = useState(false);
+
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   // Get game data from Socket.IO
@@ -64,10 +72,13 @@ const GameContent = () => {
     );
   }
 
-  // Handle keyboard input - send to server
+  // Local prediction state for smoother controls
+  const [predictedDirection, setPredictedDirection] = useState<{ x: number; y: number } | null>(null);
+
+  // Handle keyboard input - send to server with client prediction
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (!isAlive || paused) return;
+      if (!isAlive) return;
 
       let direction = null;
       switch (e.key) {
@@ -86,13 +97,23 @@ const GameContent = () => {
       }
 
       if (direction) {
+        // Immediately update local prediction for instant feedback
+        setPredictedDirection(direction);
+        // Send to server
         changeDirection(direction);
       }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isAlive, paused, changeDirection]);
+  }, [isAlive, changeDirection]);
+
+  // Clear prediction when server updates
+  useEffect(() => {
+    if (gameState) {
+      setPredictedDirection(null);
+    }
+  }, [gameState]);
 
   const handleLeaveGame = () => {
     leaveRoom();
@@ -100,7 +121,7 @@ const GameContent = () => {
   };
 
   const handleDirectionButton = (direction: { x: number; y: number }) => {
-    if (isAlive && !paused) {
+    if (isAlive) {
       changeDirection(direction);
     }
   };
@@ -116,12 +137,6 @@ const GameContent = () => {
           </div>
           <div className="flex items-center gap-4">
             <button
-              className="bg-blue-700/60 p-1.5 rounded-md hover:bg-blue-700"
-              onClick={() => setPaused(!paused)}
-            >
-              <FiPause size={18} />
-            </button>
-            <button
               className="bg-red-500/80 p-1.5 rounded-md hover:bg-red-600"
               onClick={() => setShowLeaveModal(true)}
             >
@@ -135,86 +150,374 @@ const GameContent = () => {
       <div className="flex-1 flex items-center justify-center bg-[#0F172A] relative">
         {/* Game Board */}
         <div
-          className="relative border-b border-gray-800"
+          className="relative border-y border-gray-500 "
           style={{
             width: boardWidth,
             height: boardHeight,
-            backgroundImage:
-              "linear-gradient(to right, #1E293B 1px, transparent 1px), linear-gradient(to bottom, #1E293B 1px, transparent 1px)",
-            backgroundSize: `${boardWidth / gridSize}px ${
-              boardHeight / gridSize
-            }px`,
+            // backgroundColor: '#1E293B',
           }}
         >
+          {/* Canvas for snake rendering */}
+          <canvas
+            ref={(canvas) => {
+              if (!canvas) return;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+
+              // Clear canvas
+              ctx.clearRect(0, 0, boardWidth, boardHeight);
+
+              // Draw all players' snakes
+              players.forEach((player) => {
+                if (player.snake.length === 0) return;
+
+                const thickness = boardSize * 0.8;
+                const radius = thickness / 2;
+
+                // Get player color
+                const colorIndex = player.color % PLAYER_COLORS.length;
+                const playerColor = PLAYER_COLORS[colorIndex];
+                
+                // Map Tailwind color names to hex
+                const colorMap: Record<string, { main: string; dark: string; light: string }> = {
+                  'bg-green-500': { main: '#22c55e', dark: '#16a34a', light: '#4ade80' },
+                  'bg-blue-500': { main: '#3b82f6', dark: '#2563eb', light: '#60a5fa' },
+                  'bg-red-500': { main: '#ef4444', dark: '#dc2626', light: '#f87171' },
+                  'bg-yellow-500': { main: '#eab308', dark: '#ca8a04', light: '#facc15' },
+                  'bg-purple-500': { main: '#a855f7', dark: '#9333ea', light: '#c084fc' },
+                  'bg-pink-500': { main: '#ec4899', dark: '#db2777', light: '#f472b6' },
+                  'bg-orange-500': { main: '#f97316', dark: '#ea580c', light: '#fb923c' },
+                  'bg-cyan-500': { main: '#06b6d4', dark: '#0891b2', light: '#22d3ee' },
+                };
+
+                const colors = colorMap[playerColor.bg] || colorMap['bg-green-500'];
+                const opacity = player.alive ? 1 : 0.3;
+
+                // Check for active power-ups
+                const activePowerUps = player.activePowerUps || [];
+                const hasSpeedBoost = activePowerUps.some(p => p.type === PowerUpType.SPEED_BOOST);
+                const hasShield = activePowerUps.some(p => p.type === PowerUpType.SHIELD);
+                const hasDoublePoints = activePowerUps.some(p => p.type === PowerUpType.DOUBLE_POINTS);
+
+                // Draw power-up effects
+                ctx.globalAlpha = opacity;
+
+                // Shield effect - pulsing blue aura
+                if (hasShield) {
+                  ctx.save();
+                  ctx.strokeStyle = '#3b82f6';
+                  ctx.lineWidth = thickness + 8;
+                  ctx.shadowBlur = 20;
+                  ctx.shadowColor = '#3b82f6';
+                  ctx.lineCap = 'round';
+                  ctx.lineJoin = 'round';
+
+                  ctx.beginPath();
+                  for (let i = 0; i < player.snake.length; i++) {
+                    const seg = player.snake[i];
+                    const x = seg.x * boardSize + boardSize / 2;
+                    const y = seg.y * boardSize + boardSize / 2;
+
+                    if (i > 0) {
+                      const prevSeg = player.snake[i - 1];
+                      const prevX = prevSeg.x * boardSize + boardSize / 2;
+                      const prevY = prevSeg.y * boardSize + boardSize / 2;
+                      const distance = Math.sqrt(Math.pow(x - prevX, 2) + Math.pow(y - prevY, 2));
+                      if (distance > boardSize * 2) {
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        continue;
+                      }
+                    }
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                  }
+                  ctx.stroke();
+                  ctx.restore();
+                }
+
+                // Speed boost effect - yellow glow
+                if (hasSpeedBoost) {
+                  ctx.shadowBlur = 15;
+                  ctx.shadowColor = '#fbbf24';
+                }
+
+                // Draw body as continuous path
+                ctx.strokeStyle = colors.main;
+                ctx.lineWidth = thickness;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+
+                for (let i = 0; i < player.snake.length; i++) {
+                  const seg = player.snake[i];
+                  const x = seg.x * boardSize + boardSize / 2;
+                  const y = seg.y * boardSize + boardSize / 2;
+
+                  // Check for screen wrap
+                  if (i > 0) {
+                    const prevSeg = player.snake[i - 1];
+                    const prevX = prevSeg.x * boardSize + boardSize / 2;
+                    const prevY = prevSeg.y * boardSize + boardSize / 2;
+                    const dx = x - prevX;
+                    const dy = y - prevY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // If screen wrap, start new path
+                    if (distance > boardSize * 2) {
+                      ctx.stroke();
+                      ctx.beginPath();
+                      ctx.moveTo(x, y);
+                      continue;
+                    }
+                  }
+
+                  if (i === 0) {
+                    ctx.moveTo(x, y);
+                  } else {
+                    ctx.lineTo(x, y);
+                  }
+                }
+
+                ctx.stroke();
+
+                // Draw border
+                ctx.strokeStyle = colors.dark;
+                ctx.lineWidth = thickness + 4;
+                ctx.globalCompositeOperation = 'destination-over';
+
+                ctx.beginPath();
+                for (let i = 0; i < player.snake.length; i++) {
+                  const seg = player.snake[i];
+                  const x = seg.x * boardSize + boardSize / 2;
+                  const y = seg.y * boardSize + boardSize / 2;
+
+                  if (i > 0) {
+                    const prevSeg = player.snake[i - 1];
+                    const prevX = prevSeg.x * boardSize + boardSize / 2;
+                    const prevY = prevSeg.y * boardSize + boardSize / 2;
+                    const dx = x - prevX;
+                    const dy = y - prevY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance > boardSize * 2) {
+                      ctx.stroke();
+                      ctx.beginPath();
+                      ctx.moveTo(x, y);
+                      continue;
+                    }
+                  }
+
+                  if (i === 0) {
+                    ctx.moveTo(x, y);
+                  } else {
+                    ctx.lineTo(x, y);
+                  }
+                }
+                ctx.stroke();
+
+                ctx.globalCompositeOperation = 'source-over';
+
+                // Draw head
+                if (player.alive) {
+                  const head = player.snake[0];
+                  const headX = head.x * boardSize + boardSize / 2;
+                  const headY = head.y * boardSize + boardSize / 2;
+
+                  ctx.save();
+                  ctx.translate(headX, headY);
+
+                  // Calculate rotation based on direction
+                  // Use predicted direction for current player for instant feedback
+                  const direction = (player.id === currentPlayerId && predictedDirection) 
+                    ? predictedDirection 
+                    : player.direction;
+                  let angle = 0;
+                  if (direction.y === -1) angle = 0;
+                  else if (direction.x === 1) angle = Math.PI / 2;
+                  else if (direction.y === 1) angle = Math.PI;
+                  else if (direction.x === -1) angle = -Math.PI / 2;
+                  ctx.rotate(angle);
+
+                  // Draw head circle
+                  ctx.fillStyle = colors.light;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Head border
+                  ctx.strokeStyle = colors.main;
+                  ctx.lineWidth = 3;
+                  ctx.stroke();
+
+                  // Eyes
+                  const eyeSize = radius * 0.35;
+                  const eyeSpacing = radius * 0.5;
+                  const eyeY = -radius * 0.3;
+
+                  // Left eye
+                  ctx.fillStyle = '#ffffff';
+                  ctx.beginPath();
+                  ctx.arc(-eyeSpacing, eyeY, eyeSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Right eye
+                  ctx.beginPath();
+                  ctx.arc(eyeSpacing, eyeY, eyeSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Pupils
+                  ctx.fillStyle = '#000000';
+                  const pupilSize = eyeSize * 0.6;
+
+                  ctx.beginPath();
+                  ctx.arc(-eyeSpacing, eyeY, pupilSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  ctx.beginPath();
+                  ctx.arc(eyeSpacing, eyeY, pupilSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Eye shine
+                  ctx.fillStyle = '#ffffff';
+                  const shineSize = eyeSize * 0.4;
+
+                  ctx.beginPath();
+                  ctx.arc(-eyeSpacing - pupilSize * 0.25, eyeY - pupilSize * 0.25, shineSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  ctx.beginPath();
+                  ctx.arc(eyeSpacing - pupilSize * 0.25, eyeY - pupilSize * 0.25, shineSize, 0, Math.PI * 2);
+                  ctx.fill();
+
+                  // Double points sparkles around head
+                  if (hasDoublePoints) {
+                    ctx.fillStyle = '#eab308';
+                    const sparkleCount = 6;
+                    const sparkleDistance = radius * 1.5;
+                    for (let i = 0; i < sparkleCount; i++) {
+                      const angle = (i / sparkleCount) * Math.PI * 2 + Date.now() / 500;
+                      const sx = Math.cos(angle) * sparkleDistance;
+                      const sy = Math.sin(angle) * sparkleDistance;
+                      ctx.beginPath();
+                      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+                      ctx.fill();
+                    }
+                  }
+
+                  ctx.restore();
+                }
+
+                // Reset shadow effects
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+              });
+            }}
+            width={boardWidth}
+            height={boardHeight}
+            className="absolute top-0 left-0 pointer-events-none"
+            style={{ zIndex: 2 }}
+          />
+
           {/* Food */}
           <div
-            className="absolute bg-red-500 animate-pulse"
+            className="absolute bg-red-500 rounded-full animate-pulse"
             style={{
               width: boardSize,
               height: boardSize,
               left: food.x * boardSize,
               top: food.y * boardSize,
+              zIndex: 1,
             }}
           />
 
-          {/* All Players' Snakes */}
-          {players.map((player) =>
-            player.snake.map((segment, i) => (
+          {/* Power-Ups */}
+          {gameState?.powerUps?.map((powerUp) => {
+            const config = POWER_UP_CONFIG[powerUp.type];
+            return (
               <div
-                key={`${player.id}-${i}`}
-                className={`absolute rounded-sm ${
-                  PLAYER_COLORS[player.color].bg
-                } ${i === 0 ? PLAYER_COLORS[player.color].shadow : ""}`}
+                key={powerUp.id}
+                className="absolute flex items-center justify-center animate-bounce"
                 style={{
                   width: boardSize,
                   height: boardSize,
-                  left: segment.x * boardSize,
-                  top: segment.y * boardSize,
-                  opacity: player.alive ? 1 : 0.3,
+                  left: powerUp.x * boardSize,
+                  top: powerUp.y * boardSize,
+                  zIndex: 1,
+                  filter: `drop-shadow(0 0 8px ${config.color})`,
                 }}
               >
-                {/* Head with eyes */}
-                {i === 0 && player.alive && (
-                  <div className="flex justify-center gap-1 mt-1">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                    <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                  </div>
-                )}
+                <span className="text-2xl">{config.icon}</span>
               </div>
-            ))
-          )}
+            );
+          })}
 
           {/* Player Name Labels */}
           {players.map((player) => {
             const head = player.snake[0];
+            const activePowerUps = player.activePowerUps || [];
             return (
               <div
                 key={`label-${player.id}`}
-                className="absolute text-xs font-bold whitespace-nowrap pointer-events-none"
+                className="absolute text-xs font-bold whitespace-nowrap pointer-events-none flex items-center gap-1"
                 style={{
                   left: head.x * boardSize,
                   top: head.y * boardSize - 20,
                   color: player.id === currentPlayerId ? "#FFF" : "#AAA",
+                  zIndex: 3,
                 }}
               >
-                {player.name} {!player.alive && "💀"}
+                <span>{player.name} {!player.alive && "💀"}</span>
+                {activePowerUps.map((powerUp, idx) => (
+                  <span key={idx} className="text-sm">
+                    {POWER_UP_CONFIG[powerUp.type].icon}
+                  </span>
+                ))}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Pause Overlay */}
-      {paused && (
-        <div className="absolute inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-20">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-white mb-4">PAUSED</p>
-            <p className="text-lg text-white/80">
-              Click pause button again to resume
-            </p>
-          </div>
+      {/* Power-Up HUD for Current Player */}
+      {currentPlayer && currentPlayer.activePowerUps && currentPlayer.activePowerUps.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          {currentPlayer.activePowerUps.map((powerUp, idx) => {
+            const config = POWER_UP_CONFIG[powerUp.type];
+            const timeLeft = Math.max(0, powerUp.expiresAt - Date.now());
+            const duration = powerUp.type === PowerUpType.SPEED_BOOST ? 6000 :
+                           powerUp.type === PowerUpType.SHIELD ? 4000 :
+                           powerUp.type === PowerUpType.DOUBLE_POINTS ? 12000 : 1000;
+            const progress = (timeLeft / duration) * 100;
+
+            return (
+              <div
+                key={idx}
+                className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2 border-2 flex flex-col items-center gap-1 min-w-[80px]"
+                style={{ borderColor: config.color }}
+              >
+                <span className="text-2xl">{config.icon}</span>
+                <span className="text-xs font-bold text-white">{config.name}</span>
+                <span className="text-xs text-gray-300">{Math.ceil(timeLeft / 1000)}s</span>
+                <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-100"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: config.color,
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
+
+
 
       {/* Spectator Mode (when player is dead) */}
       {!isAlive && !gameOver && (
